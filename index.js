@@ -32,13 +32,9 @@ app.get('/timenow', (req, res)=>{
 	res.render('timenow', {dateNow: dateNow, timeNow: timeNow});
 });
 
-app.get('/test', (req, res)=>{
-	res.send("Test on edukas!");
-});
-
 app.get('/wisdom', (req, res)=>{ 
 	let folkWisdom = [];
-	fs.readFile("txtfiles/vanasonad.txt", "utf8", (err, data)=>{
+	fs.readFile("public/txtfiles/vanasonad.txt", "utf8", (err, data)=>{
 		if(err) {
 			console.log(err);
 		}
@@ -61,6 +57,7 @@ app.get('/eestifilm/filmiloend', (req, res)=>{
 	conn.query(sql, (err, result)=>{
 		if(err) {
 			throw err;
+			res.render('eestifilmlist', {filmlist: sqlresult});
 		}
 		else {
 			//console.log(result);
@@ -74,8 +71,28 @@ app.get('/eestifilm/filmiloend', (req, res)=>{
 	//res.render('eestifilmlist', {filmlist: sqlresult});
 });
 
-app.get('/eestifilmaddperson', (req, res) => {
+app.get('/eestifilm/lisapersoon', (req, res) => {
+	//res.send('See töötab!');
   res.render('eestifilmaddperson');
+});
+
+app.get('/news', (req,res)=> {
+	res.render('news');
+});
+
+app.get('/news/add', (req,res)=> {
+	res.render('addnews');
+});
+
+app.get('/news/read', (req,res)=> {
+	res.render('readnews');
+});
+
+app.get('/news/read/:id/:color', (req,res)=> {
+	//res.render('readnews');
+	console.log(req.params);
+	console.log(req.query);
+	res.send('Vaatame uudist, mille id on: ' + req.params.id);
 });
 
 app.post('/eestifilm/lisapersoon', (req, res)=>{
@@ -84,14 +101,12 @@ app.post('/eestifilm/lisapersoon', (req, res)=>{
 	let sql = 'INSERT INTO person (first_name, last_name, birth_date) VALUES (?,?,?)'
 	conn.query(sql, [req.body.firstNameInput, req.body.lastNameInput, req.body.birthDate], (err, result)=>{
 		if(err) {
-			throw err;
+			throw (err);
 			notice = 'Andmete salvestamine ebaõnnestus!' + err;
-			res.render('eestifilmaddperson', {notice: notice});
-		}
+			res.render('eestifilmaddperson', {notice: notice});			}
 		else{
 			notice = 'Filmitegelase ' + req.body.firstNameInput + ' ' + req.body.lastNameInput + ' salvestamine õnnestus!';
-		res.render('eestifilmaddperson', {notice: notice});
-		}
+		res.render('eestifilmaddperson', {notice: notice});			}
 	});
 });
 

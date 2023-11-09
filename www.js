@@ -5,7 +5,7 @@ const fs = require("fs");
 const querystring = require('querystring');
 const dateInfo = require("./date_time_et");
 const pageHead = '<!DOCTYPE html>\n<html><head><meta charset="utf-8">\n\<title>Marina Kuznetsova, veebiprogrammeerimine 2023</title></head> <body>';
-const pageBanner = '\n\t<img src="banner.png" alt="Lehe bänner">\n';
+const pageBanner = '\n\t<img src="../banner/vp_banner_2023.png" alt="Lehe bänner">\n';
 const pageBody = '<h1>Marina Kuznetsova</h1><p>See leht on loodud <a href="https://www.tlu.ee" target="_blank">TLÜ</a> Digitehnoloogiate instituudis õppetöö raames!</p><p>Ma õpin informaatikat Tallinna Ülikoolis</p><p>Vabal ajal mulle meeldib puhata kodus</p><hr><p>Kursus, mille raames leht tehti on: veebiprogrammeerimine.</p></body></html>'
 const pageFoot = '\n</body>\n</html>';
 
@@ -144,7 +144,7 @@ http.createServer(function(req, res){
 			});
 				
 		}
-		else if (currentURL.pathname === "/banner.png"){
+		else if (currentURL.pathname === "/vp_banner_2023.png"){
 			console.log("Tahan pilti!");
 			let filePath = path.join(__dirname, "public", "banner/vp_banner_2023.png");
 			fs.readFile(filePath, (err, data)=>{
@@ -203,28 +203,18 @@ http.createServer(function(req, res){
 	}
 
 	function tluPhotoPage(res, photoHTML){
-			//console.log(photoHTML)
-			res.writeHead(200, {"Content-Type": "text/html"});
-			res.write(pageHead);
-			res.write(pageBanner);
-			res.write(pageBody);
-			res.write('\n\t<hr>');
-			res.write(photoHTML);
-			//res.write('\n\t<img src="tlu_42.jpg" alt=TLÜ foto">');
-			res.write('\n\t <p><a href="/">Tagasi avalehele</a>!</p>');
-			res.write(pageFoot);
-			//et see kõik valmiks ja ära saadetaks
-		
-			request.on('end', () => {
-				console.log(receivedData);
-				callback(parse(receivedData));
-				callback(querystring.decode(receivedData));
-			});
-		}
-		else {
-			callback(null);
-		}
-		
+		//console.log(photoHTML);
+		res.writeHead(200, {"Content-Type": "text/html"});
+		res.write(pageHead);
+		res.write(pageBanner);
+		res.write(pageBody);
+		res.write('\n\t<hr>');
+		res.write(photoHTML);
+		//res.write('\n\t<img src="tlu_42.jpg" alt="TLÜ foto">');
+		res.write('\n\t <p><a href="/">Tagasi avalehele</a>!</p>');
+		res.write(pageFoot);
+		//et see kõik valmiks ja ära saadetaks
+		return res.end();
 	}
 	
 	function collectRequestData(request, callback) {

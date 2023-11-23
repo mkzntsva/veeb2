@@ -11,6 +11,7 @@ const multer = require('multer');
 const upload = multer({dest: './public/gallery/orig/'});
 const mime = require('mime');
 const sharp = require ('sharp');
+const async = require('async');
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
@@ -18,12 +19,20 @@ app.use(express.static('public'));
 app.use(bodyparser.urlencoded({extended: true}));
 
 //loon andmebaasiühenduse
+const conn = mysql.createConnection({
+	host: dbConfig.configData.host,
+	user: dbConfig.configData.user,
+	password: dbConfig.configData.password,
+	database: 'if23_marina_kuznetsova',
+})
+
 const connection = mysql.createConnection({
 	host: dbConfig.configData.host,
 	user: dbConfig.configData.user,
 	password: dbConfig.configData.password,
 	database: 'if23_marina_kuznetsova',
 })
+
 
 //route
 app.get('/', (req, res)=>{
@@ -81,6 +90,46 @@ app.get('/eestifilm/lisapersoon', (req, res) => {
   res.render('eestifilmaddperson');
 });
 
+app.get('/eestifilm/lisaseo', (req, res) => {
+	//res.send('See töötab!');
+	//paneme async mooduli abil mitu asja korraga tööle
+	//1) loome tegevuste loendi
+	const myQueries = [
+		function(callback) {
+			conn.execute('SELECT id,title from movie', (err, result)=>{
+				if(err) {
+					return callback(err);	
+				}
+				else {
+					return callback(null, result);
+				}
+			});
+		}, 
+		function(callback) {
+			conn.execute('SELECT id,first_name, last_name from person', (err, result)=>{
+				if(err) {
+					return callback(err);	
+				}
+				else {
+					return callback(null, result);
+				}
+			});
+		}
+	];
+	
+	//paneme need tegevused asünkroonselt paralleelselt tööle
+	async.parallel(myQueries, (err, results)=>{
+		if(err) {
+			throw err;
+			console.log(results);
+			//mis kõik teha,ka render osa vajalike tükkidega
+			res.render('eestifilmaddrelation');
+		}
+	});
+	
+});
+
+
 app.get('/news', (req,res)=> {
 	res.render('news');
 });
@@ -130,6 +179,22 @@ app.post('/photoupload', upload.single('photoInput'), (req, res)=> {
 	});
 	
 	
+});
+
+app.get('/photogallery', (req, res)=> {
+	let photoList = [];
+	let sql = 'SELECT id,filename,alttext FROM vp_gallery WHERE privacy > 1 AND deleted IS NULL ORDER BY id DESC';
+	connection.execute(sql, (err,result)=>{
+		if (err){
+			throw err;
+			res.render('photogallery', {photoList : photoList});
+		}
+		else {
+			photoList = result;
+			console.log(result);
+			res.render('photogallery', {photoList : photoList});
+		}
+	});
 });
 
 app.get('/photogallery', (req, res)=>{

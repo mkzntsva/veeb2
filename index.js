@@ -9,9 +9,16 @@ const database = 'if23_marina_kuznetsova';
 const multer = require('multer');
 //seame multer jaoks vahevara, mis määrab üleslaadimise kataloogi
 const upload = multer({dest: './public/gallery/orig/'});
-const mime = require('mime');
+const mime = require('mime'); // pigem 'file-type'
 const sharp = require ('sharp');
 const async = require('async');
+//krypteerimiseks
+const bcrypt = require('bcrypt');
+//sessiooni jaoks
+const session = require('express-session');
+app.use(session({secret: 'minuAbsoluutseltSalajaneVõti', saveUninitialized: true, resave: false}));
+
+let mySession;
 
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
@@ -39,6 +46,88 @@ app.get('/', (req, res)=>{
 	//res.send("See töötab!");
 	res.render('index');
 });
+
+app.get('/signup', (req, res)=>{
+	res.render('signup');
+});
+
+app.post('/', (req, res) => {
+    if (!req.body.emailInput || !req.body.passwordInput) {
+        console.log('Paha!');
+    } else {
+        console.log('Hea!');
+        let sql = 'SELECT password FROM vp_users WHERE email =?';
+        conn.execute(sql, [req.body.emailInput], (err, results) => {
+            if (err) {
+                notice = 'Tehnilise vea tõttu sisse logida ei saa';
+                console.log('ei saa andmebaasist loetud');
+            } else {
+                console.log(results);
+                if (results.length == 0) {
+                    console.log('Tuhi!');
+                    notice = 'Viga kasutajatunnuses või paroolis!';
+                } else {
+                    // võrdleme parooli andmebaasist
+                    bcrypt.compare(req.body.passwordInput, results[0].password, (err, compresult) => {
+                        if (err) {
+                            throw err;
+                        } else {
+                            if (compresult) {
+                                console.log('Sisse!');
+                                notice = 'Saad sisse logitud!';
+								mySession = req.session;
+                                mySession.userName = req.body.emailInput;
+                            } else {
+                                console.log('Jääd välja!');
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+    res.render('index', { notice: notice });
+});
+
+app.get('/logout', (req, res)=>{
+	console.log(mySession.userName);
+	console.log('Valja!');
+	req.session.destroy();
+	mySession = null;
+	res.redirect('/');
+});
+
+app.post('/signup', (req, res)=>{
+	let notice = 'Ootel!';
+	console.log(req.body);
+	// javascript AND ->   &&    OR ->   ||
+	if(!req.body.firstNameInput || !req.body.lastNameInput || !req.body.genderInput || !req.body.birthInput || !req.body.emailInput || !req.body.passwordInput || req.body.passwordInput.length < 8 || req.body.passwordInput !== req.body.confirmPasswordInput){
+		console.log('andmeid puudu või sobimatud!');
+		notice = 'Andmeid puudu või sobimatud!';
+		res.render('signup', {notice: notice});
+	}
+	else {
+		console.log('OK!');
+		notice = 'Ok!';
+		//"soolame" ja krüpteerime parooli
+		bcrypt.genSalt(10, (err, salt)=>{
+			bcrypt.hash(req.body.passwordInput, salt, (err, pwdHash)=>{
+				let sql = 'INSERT INTO vp_users (firstname, lastname, birthdate, gender, email, password) VALUES(?,?,?,?,?,?)';
+				connection.execute(sql, [req.body.firstNameInput, req.body.lastNameInput, req.body.birthInput, req.body.genderInput, req.body.emailInput, pwdHash], (err, result)=>{
+					if(err){
+						notice = 'Andmete salvestamine ebaõnnestus!';
+						res.render('signup', {notice: notice});
+					}
+					else {
+						notice = 'Kasutaja ' + req.body.emailInput + ' lisamine õnnestus!';
+						res.render('signup', {notice: notice});
+					}
+				});
+			});
+		});		
+	}
+});
+
 
 app.get('/timenow', (req, res)=>{
 	const dateNow = dateInfo.dateNowET();
@@ -142,7 +231,7 @@ app.get('/news/read', (req,res)=> {
 	res.render('readnews');
 });
 
-app.get('/photoupload', (req, res)=> {
+app.get('/photoupload', checkLogin, (req, res)=> {
 	res.render('photoupload');
 });
 
@@ -223,6 +312,26 @@ app.post('/eestifilm/lisapersoon', (req, res)=>{
 		res.render('eestifilmaddperson', {notice: notice});			
 		}
 	});
-});
+}); 
+
+//funktsioon mis kontrollib sisselogimist . on vahevara (middleware)
+function checkLogin(req, res, next){
+	console.log('Kontrollime, kas on sisselogitud!');
+	if(mySession != null){
+		if(mySession.userName){
+			console.log('Ongi sees!');
+			next()
+		}
+		else {
+			console.log('Polnud sisse loginud!');
+			res.redirect('/');
+		}
+	}
+	else {
+		console.log('Polnud sisse loginud!');
+		res.redirect('/');
+	}
+	next();
+}
 
 app.listen(5214);

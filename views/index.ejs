@@ -3,8 +3,6 @@
 <head>
 	<meta charset="utf-8">
 	<title>Marina Kuznetsova, veebiprogrammeerimine 2023</title>
-	<script>
-		console.log("See töötab!") ;
 	</script src="first.js" defer></script>
 </head>
 <body>
@@ -17,15 +15,25 @@
 	<p>Kursus, mille raames leht tehti on: veebiprogrammeerimine.</p>
 	<hr>
 	<ul>
-	<li><a href="/timenow">Praegune hetk</a></li>
-	<li><a href ="/wisdom">Vanasõnad</a></li>
-	<li><a href ="/eestifilm">Eesti film</a></li>
-	<li><a href ="/news">Uudised</a></li>
-	<li><a href ="/photoupload">Foto laadimine galeriisse</a></li>
-	<li><a href ="/photogallery">Fotodegalerii</a></li>
-	<ul>
-	
+		<li><a href="/timenow">Praegune hetk</a></li>
+		<li><a href ="/wisdom">Vanasõnad</a></li>
+		<li><a href ="/eestifilm">Eesti film</a></li>
+		<li><a href ="/news">Uudised</a></li>
+		<li><a href ="/photoupload">Foto laadimine galeriisse</a> (ainult sisseloginud kasutajatele)</a></li>
+		<li><a href ="/photogallery">Fotodegalerii</a></li>
+	</ul>
+	<hr>
+	<h2>Logi sisse</h2>
+	<form method="POST">
+	<label for="emailInput">E-mail (kasutajatunnus)</label>
+		<input type="email" name="emailInput" id="emailInput"><br>
+		<label for="passwordInput">Salasõna</label>
+		<input type="password" name="passwordInput" id="passwordInput">
+		<input type="submit" name="UserSubmit" value="Logi sisse">
+		<span> <% locals.notice %></span>
+		</form>
+		<p><a href="/logout">Logi välja!</a>!</p>
+	<p>Või loo endale<a href="/signup">kasutajakonto</a>!</p>
 	</hr>
-
 </body>
 </html>

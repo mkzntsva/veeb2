@@ -1,11 +1,15 @@
 const express = require('express');
 const app = express();
 const fs = require('fs');
+//kui kõik andmebaasi tegevused on pool'i ümber tõstetud, siis mysql moodulit siia ei ole vajali
 const mysql = require('mysql2');
 const bodyparser = require('body-parser');
-const dateInfo = require('./date_time_et');
+const dateInfo = require('./src/date_time_et');
 const dbConfig = require('../../vp23config');
 const database = 'if23_marina_kuznetsova';
+//kui kõik andmebaasi tegevused on pool'i ümber tõstetud, siis mysql moodulit siia ei ole vajali
+const dataBase = 'if23_marina_kuznetsova';
+const pool = require('./src/databasepool').pool;
 const multer = require('multer');
 //seame multer jaoks vahevara, mis määrab üleslaadimise kataloogi
 const upload = multer({dest: './public/gallery/orig/'});
@@ -20,6 +24,10 @@ app.use(session({secret: 'minuAbsoluutseltSalajaneVõti', saveUninitialized: tru
 
 let mySession;
 
+//kasutame marsruuti 
+const newsRouter = require('./routes/news');
+app.use('/news', newsRouter);
+
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 //app.use(bodyparser.urlencoded({extended: false}));
@@ -33,12 +41,13 @@ const conn = mysql.createConnection({
 	database: 'if23_marina_kuznetsova',
 })
 
-const connection = mysql.createConnection({
+//kui kõik saab pool'i siis seda pole vaja 
+/* const connection = mysql.createConnection({
 	host: dbConfig.configData.host,
 	user: dbConfig.configData.user,
 	password: dbConfig.configData.password,
 	database: 'if23_marina_kuznetsova',
-})
+}) */
 
 
 //route
@@ -54,39 +63,42 @@ app.get('/signup', (req, res)=>{
 app.post('/', (req, res) => {
     if (!req.body.emailInput || !req.body.passwordInput) {
         console.log('Paha!');
-    } else {
-        console.log('Hea!');
-        let sql = 'SELECT password FROM vp_users WHERE email =?';
-        conn.execute(sql, [req.body.emailInput], (err, results) => {
-            if (err) {
-                notice = 'Tehnilise vea tõttu sisse logida ei saa';
-                console.log('ei saa andmebaasist loetud');
-            } else {
-                console.log(results);
-                if (results.length == 0) {
-                    console.log('Tuhi!');
-                    notice = 'Viga kasutajatunnuses või paroolis!';
-                } else {
-                    // võrdleme parooli andmebaasist
-                    bcrypt.compare(req.body.passwordInput, results[0].password, (err, compresult) => {
-                        if (err) {
-                            throw err;
-                        } else {
-                            if (compresult) {
-                                console.log('Sisse!');
-                                notice = 'Saad sisse logitud!';
-								mySession = req.session;
-                                mySession.userName = req.body.emailInput;
-                            } else {
-                                console.log('Jääd välja!');
-                            }
-                        }
-                    });
-                }
-            }
-        });
-    }
+		else {
+			console.log('Hea!');
+			let sql = 'SELECT password FROM vp_users WHERE email =?';
+			//andmebaasio osa 
+			conn.execute(sql, [req.body.emailInput], (err, results) => {
+				if (err) {
+					notice = 'Tehnilise vea tõttu sisse logida ei saa';
+					console.log('ei saa andmebaasist loetud');
+				} else {
+					console.log(results);
+					if (results.length == 0) {
+						console.log('Tuhi!');
+						notice = 'Viga kasutajatunnuses või paroolis!';
+					} else {
+						// võrdleme parooli andmebaasist
+						bcrypt.compare(req.body.passwordInput, results[0].password, (err, compresult) => {
+							if (err) {
+								throw err;
+							} else {
+								if (compresult) {
+									console.log('Sisse!');
+									notice = 'Saad sisse logitud!';
+									mySession = req.session;
+									mySession.userName = req.body.emailInput;
+								} else {
+								console.log('Jääd välja!');
+								}
+							}
+						});
+					}	
+				}	
+			});
+		// andmebaasi osa lõppeb
+		}
     res.render('index', { notice: notice });
+	}
 });
 
 app.get('/logout', (req, res)=>{
@@ -113,6 +125,7 @@ app.post('/signup', (req, res)=>{
 		bcrypt.genSalt(10, (err, salt)=>{
 			bcrypt.hash(req.body.passwordInput, salt, (err, pwdHash)=>{
 				let sql = 'INSERT INTO vp_users (firstname, lastname, birthdate, gender, email, password) VALUES(?,?,?,?,?,?)';
+				//andmebaasi osa
 				connection.execute(sql, [req.body.firstNameInput, req.body.lastNameInput, req.body.birthInput, req.body.genderInput, req.body.emailInput, pwdHash], (err, result)=>{
 					if(err){
 						notice = 'Andmete salvestamine ebaõnnestus!';
@@ -123,6 +136,7 @@ app.post('/signup', (req, res)=>{
 						res.render('signup', {notice: notice});
 					}
 				});
+				//andmebaasi osa
 			});
 		});		
 	}
@@ -218,17 +232,48 @@ app.get('/eestifilm/lisaseo', (req, res) => {
 	
 });
 
-
-app.get('/news', (req,res)=> {
-	res.render('news');
+app.get('/news', (req, res)=>{
+	res.render('/news');
 });
 
-app.get('/news/add', (req,res)=> {
+app.get('/news/add', (req, res)=>{
 	res.render('addnews');
 });
 
-app.get('/news/read', (req,res)=> {
+app.post('/news/add', (req,res)=> {
+	if(!req.body.titleInput || !req.body.contentInput || !req.body.expireDateInput){
+		console.log('Uudisega jama');
+		notice = 'Andmeid puudu!';
+		res.render('addnews', {notice: notice});
+	}
+	else {
+		let sql= 'INSERT INTO vp_news (title, content, expire, userid) VALUES (?,?,?,?)';
+		let userid = 1;
+		
+		connection.execute(sql, [req.body.titleInput, req.body.connectionInput, req.body.expireDateInput, userid], (err, result)=>{
+			if(err) {
+				throw err;
+				notice = 'Uudise salvestamine ebaõnnestus';
+				res.render('addnews', {notice: notice});
+			}
+			else {
+				notice = 'Uudis edukalt salvestatud!';
+				res.render('addnews', {notice: notice});
+			}
+		});
+	}
+	
+});
+
+app.get('/news/read', (req, res)=>{
 	res.render('readnews');
+});
+
+app.get('/news/read/:id', (req,res)=> {
+	//res.render('readnews');
+	console.log(req.params);
+	console.log(req.query);
+	res.send('Vaatame uudist,mille id on:' + req.params.id);
 });
 
 app.get('/photoupload', checkLogin, (req, res)=> {
@@ -254,36 +299,55 @@ app.post('/photoupload', upload.single('photoInput'), (req, res)=> {
 	
 	
 	let sql = 'INSERT INTO vp_gallery (filename, originalname, alttext, privacy, userid) VALUES (?,?,?,?,?)';
-	const userid = 1;
-	connection.query(sql, [fileName, req.file.originalname, req.body.altInput, req.body.privacyInput, userid], (err, result)=>{
+	//const userid = 1;
+	//teeme andmebaasiühenduse pool'i kaudu
+	pool.getConnection((err, connection)=> {
 		if(err) {
 			throw err;
-			notice = 'Foto andmete salvestamine ebaõnnestus!' + err;
-			res.render('photoupload', {notice: notice});
 		}
 		else {
-			notice = 'Pilt "' + req.file.originalname + '" laeti üles!';
-			res.render('photoupload', {notice: notice});
+			//andmebaasi osa
+			connection.execute(sql, [fileName, req.file.originalname, req.body.altInput, req.body.privacyInput, userid], (err, result)=>{
+				if(err) {
+					throw err;
+					notice = 'Foto andmete salvestamine ebaõnnestus!' + err;
+					res.render('photoupload', {notice: notice});
+				}
+				else {
+					notice = 'Pilt "' + req.file.originalname + '" laeti üles!';
+					res.render('photoupload', {notice: notice});
+				}
+			});
+			//andmebaasi osa
 		}
 	});
-	
-	
 });
 
 app.get('/photogallery', (req, res)=> {
 	let photoList = [];
 	let sql = 'SELECT id,filename,alttext FROM vp_gallery WHERE privacy > 1 AND deleted IS NULL ORDER BY id DESC';
-	connection.execute(sql, (err,result)=>{
-		if (err){
+	//teema andmebaasi ühenduse pool'i kaudu
+	pool.getConnection((err,connection)=>{
+		if(err){
 			throw err;
-			res.render('photogallery', {photoList : photoList});
 		}
-		else {
-			photoList = result;
-			console.log(result);
-			res.render('photogallery', {photoList : photoList});
-		}
-	});
+		else
+			//andmebaasi osa
+			connection.execute(sql, (err,result)=>{
+				if (err){
+					throw err;
+					res.render('photogallery', {photoList : photoList});
+					connection.release();
+				}
+				else {
+					photoList = result;
+					console.log(result);
+					res.render('photogallery', {photoList : photoList});
+				}
+			});
+			//andmebaasi osa
+		} //get.Connection else lõppeb 
+	});//pool.getConnection lõppeb
 });
 
 app.get('/photogallery', (req, res)=>{

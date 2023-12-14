@@ -20,20 +20,20 @@
 			<option value="0" selected disabled>Vali filmitegelane</option>
 			<option value="1">Pärdik</option>
 			<option value="2">Elevant</option>
-			
 		</select>
-		<label for="firstNameInput">Filmitegelase eesnimi</label>
-		<input type="text" name="firstNameInput" id="firstNameInput" placeholder="Eesnimi..." required>
+		
+		<label for= "filmInput">Film</label>
+		<select name="filmInput" id="filmInput">
+			<option value="0" selected disabled>Vali film</option>
+			<option value="1">Metsaelu</option>
+			<option value="2">Jahilugu</option>
+		</select>
+		
+		
+		
 		<br>
-		<label for="lastNameInput">Filmitegelase perekonnanimi</label>
-		<input type="text" name="lastNameInput" id="lastNameInput" placeholder="Perekonnanimi..." required>
-		<br>
-		<label for="birthDateInput">Sünniaeg: </label>
-		<Input type="date" name="birthDateInput" id="birthDateInput" required>
-		<br>
-		<input type="submit" name="personSubmit" value="Salvesta">
+		<input type="submit" name="personRelationSubmit" value="Salvesta">
 	</form>
 	<p><%= locals.notice %></p>
 </body>
-
 </html>

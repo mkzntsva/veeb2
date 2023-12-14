@@ -1,5 +1,5 @@
 //console.log("See töötab!")
-let fileSizeLimit = 1,5 * 1024 * 1024
+let fileSizeLimit = 1.5 * 1024 * 1024
 
 window.onload = function(){
 	//document.getElementById("photoSubmit")
